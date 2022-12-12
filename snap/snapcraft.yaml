@@ -93,6 +93,8 @@ apps:
     plugs:
       - network
       - bluez
+      - avahi-control
+      - avahi-observe
     environment:
       TMPDIR: "/mnt"
 slots:
