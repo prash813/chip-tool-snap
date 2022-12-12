@@ -8,6 +8,9 @@ This is an attempt to snap out matter chip-tool application, which is a referenc
 - Clone this repo.
 - To build the snap use following command at bash prompt inside your container
   ``` snapcraft --destructive-mode ```
+- for crosscompiling for arm64 platform on amd64 run command
+  ``` snapcraft --destructive-mode --build-for=arm64 ```
+  
 
 ## Notes
 - At this moment this will build for x86_64 arch only. For arm64, work is in progress. 
@@ -24,3 +27,7 @@ This is an attempt to snap out matter chip-tool application, which is a referenc
 
 - Finally check out the matter repo for more details. Starting point  can be following      
   [matter-build-guide](https://github.com/project-chip/connectedhomeip/blob/master/docs/guides/BUILDING.md)
+
+## Note to avoid git repo cloning 
+- check for LOCAL_BUILD environment variable this is to avoid repo cloning. But for this you need to build the snap without this variable once and then move ``` parts/matter-dev/build ``` to SNAPCRAFT_PROJECT_DIR and then build the snap, in this case it doesnt clone the repo. 
+
