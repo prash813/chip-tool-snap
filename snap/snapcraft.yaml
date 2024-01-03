@@ -1,4 +1,4 @@
-name: chip-tool 
+name: chip-tool-1002 
 version: "0.1"
 summary: matter for HA prelim snap
 description: |
@@ -9,37 +9,121 @@ base: core22
 grade: stable
 license: Apache-2.0 #not sure whether this is right
 architectures:
+  #  - build-on: amd64
+  #  build-for: amd64
   - build-on: amd64
-    build-for: amd64
-  - build-on: arm64
     build-for: arm64
 assumes:
   - snapd2.46
 parts:
+  chip-tool-script:
+    source: .
+    plugin: nil  
+    override-pull: |
+      echo "Do nothing"  
+    override-build: |
+      tee $SNAPCRAFT_PART_INSTALL/chip-tool.sh << EOF
+      #!/bin/sh
+      SPACE=" "
+      CMDLINE="" 
+      #CMDLINE="\$(basename $0 .sh)"
+      #CMDLINE=\$CMDLINE\$SPACE	
+      count="0"
+      for var in "\$@"; do
+        echo "time pass"
+        case \$var in
+          --paa-trust-store-path)
+              CMDLINE=\$CMDLINE\$var\$SPACE
+              count="1"
+            ;;
+          *)
+             if [ "\$count" = "1" ];
+             then
+               VAR2=\$SNAP_COMMON/\$var
+               CMDLINE=\$CMDLINE\$VAR2\$SPACE
+             else
+                 CMDLINE=\$CMDLINE\$var\$SPACE
+             fi 
+        esac
+        echo "\$CMDLINE"
+      done
+      TAG="chip-tool-1002.chip-tool"	
+      #echo  "\$CMDLINE" > /var/snap/$SNAPCRAFT_PROJECT_NAME/common/chip-tool.log 	
+      echo  "\$CMDLINE" > \$SNAP_COMMON/chip-tool.log 	
+      logger -p 1 --tag=\$TAG  "\$CMDLINE"
+      #BASENAME="\$(basename $0 .sh)"	
+      \$CMDLINE 	
+      EOF
+      chmod 777 $SNAPCRAFT_PART_INSTALL/chip-tool.sh
+    organize:
+      chip-tool.sh: bin/chip-tool.sh             
   matter-dev:
     source: https://github.com/project-chip/connectedhomeip.git #connectedhomeip 
     plugin: nil
+    build-environment:
+      - TAG: v1.0.0.2
     override-pull: |
-     echo "just do nothing"
-     #ln -sf ${CRAFT_PROJECT_DIR}/connectedhomeip connectedhomeip
+      echo "just do nothing"
+      #ln -sf ${CRAFT_PROJECT_DIR}/connectedhomeip connectedhomeip
     override-build: |
       set +u	
       echo "I am in dir `pwd`"
-      git clone --recurse-submodules https://github.com/project-chip/connectedhomeip.git .
-      git submodule update --init	
-      #cp -arfT $CRAFT_PROJECT_DIR/connectedhomeip $CRAFT_PART_BUILD/
-     
-      #mv $CRAFT_PROJECT_DIR/bakup/*  $CRAFT_PART_BUILD/
+      echo ${SNAPCRAFT_TARGET_ARCH}
+      if [ "${SNAPCRAFT_TARGET_ARCH}" = "arm64" ]
+      then
+        echo
+        echo "ist snapcraft..."
+        echo
+      fi
+      if [ "${LOCAL_BUILD}" = "YES" ] 
+      then
+
+        echo "just move the source"
+        mv ${SNAPCRAFT_PROJECT_DIR}/build/* $SNAPCRAFT_PART_BUILD/
+        mv ${SNAPCRAFT_PROJECT_DIR}/build/.[A-Z,a-z]?*  $SNAPCRAFT_PART_BUILD/
+        cp ${SNAPCRAFT_PROJECT_DIR}/Commands.* $SNAPCRAFT_PART_BUILD/examples/chip-tool/commands/common/
+        cp ${SNAPCRAFT_PROJECT_DIR}/PairingCommand.* $SNAPCRAFT_PART_BUILD/examples/chip-tool/commands/pairing/
+        cp ${SNAPCRAFT_PROJECT_DIR}/CHIPLinuxStorage.h $SNAPCRAFT_PART_BUILD/src/platform/Linux/
+        cp ${SNAPCRAFT_PROJECT_DIR}/CHIPCryptoPALOpenSSL.cpp  $SNAPCRAFT_PART_BUILD/src/crypto/ 
+        cp ${SNAPCRAFT_PROJECT_DIR}/CHIPCryptoPAL.h $SNAPCRAFT_PART_BUILD/src/crypto/
+        cp ${SNAPCRAFT_PROJECT_DIR}/DefaultDeviceAttestationVerifier.cpp $SNAPCRAFT_PART_BUILD/src/credentials/attestation_verifier/
+        cp ${SNAPCRAFT_PROJECT_DIR}/FileAttestationTrustStore.cpp $SNAPCRAFT_PART_BUILD/src/credentials/attestation_verifier/
+        cp ${SNAPCRAFT_PROJECT_DIR}/Helper.cpp $SNAPCRAFT_PART_BUILD/src/platform/Linux/bluez/
+
+      else	
+        #git clone --recurse-submodules https://github.com/project-chip/connectedhomeip.git .
+        #git submodule update --init
+        git clone --depth 1   https://github.com/project-chip/connectedhomeip.git --branch=$TAG .
+        #mv .gitmodules bakgitmodules
+        #sed '/boufalolab_repo/,+4d' bakgitmodules > .gitmodules
+        #git submodule deinit -f third_party/bouffalolab/repo
+        ##VAR1=$(grep -ri submodule .gitmodules | awk -F' ' '{print $2 }' | awk -F']' '{print $1}')
+        #VAR1=$(grep -ri path .gitmodules | awk -F'=' '{print $2 }')
+        #echo $VAR1	
+        #git submodule init $VAR1 
+        scripts/checkout_submodules.py --shallow --platform linux 
+      fi
+      sed -i 's/#define FATCONFDIR \"\/tmp\"/#define FATCONFDIR \"\/mnt\"/g' $SNAPCRAFT_PART_BUILD/src/platform/Linux/CHIPLinuxStorage.h
+      sed -i 's/#define SYSCONFDIR \"\/tmp\"/#define SYSCONFDIR \"\/mnt\"/g' $SNAPCRAFT_PART_BUILD/src/platform/Linux/CHIPLinuxStorage.h
+      sed -i 's/#define LOCALSTATEDIR \"\/tmp\"/#define LOCALSTATEDIR \"\/mnt\"/g' $SNAPCRAFT_PART_BUILD/src/platform/Linux/CHIPLinuxStorage.h
+      ##git submodule update --depth 1 --recursive	
       source scripts/activate.sh
-
-      gn gen out/host1
-
-      ninja -C out/host1
-      cp -ar out/host1/chip-* $CRAFT_PART_INSTALL/
-      cp out/host1/spake2p  $CRAFT_PART_INSTALL/
-      cp out/host1/address-resolve-tool $CRAFT_PART_INSTALL/
-      cp out/host1/obj/src/qrcodetool/bin/qrcodetool $CRAFT_PART_INSTALL/  
-      cp -ar out/host1/lib    $CRAFT_PART_INSTALL/
+      echo ""	
+      if [ "${SNAPCRAFT_TARGET_ARCH}" = "arm64" ] 
+      then
+        echo "arm64 build"
+        OUTDIR=out/host_arm64
+        gn gen --args='target_os="linux" target_cpu="arm64"' ${OUTDIR} 
+      else
+        OUTDIR=out/host1
+        gn gen ${OUTDIR}
+      fi  	
+      ninja -C ${OUTDIR}
+      cp -ar ${OUTDIR}/chip-* $CRAFT_PART_INSTALL/
+      cp ${OUTDIR}/spake2p  $CRAFT_PART_INSTALL/
+      cp ${OUTDIR}/address-resolve-tool $CRAFT_PART_INSTALL/
+      cp ${OUTDIR}/obj/src/qrcodetool/bin/qrcodetool $CRAFT_PART_INSTALL/  
+      cp -ar ${OUTDIR}/lib    $CRAFT_PART_INSTALL/
     build-packages: [git, gcc, g++, pkg-config, libssl-dev, libdbus-1-dev, libglib2.0-dev, libavahi-client-dev, ninja-build, python3-venv, python3-dev, python3-pip, unzip, libgirepository1.0-dev, libcairo2-dev, libreadline-dev, generate-ninja]
     #override-prime:
     #  rm -r $CRAFT_PART_INSTALL
@@ -55,7 +139,20 @@ parts:
       chip-tool: bin/chip-tool  
 apps:
   chip-tool:
-    command: bin/chip-tool
+    command: bin/chip-tool.sh
     plugs:
       - network
       - bluez
+      - avahi-control
+    environment:
+      TMPDIR: "/mnt"
+slots:
+  exec-slot:
+    interface: content
+    content:  executables
+    read:
+      - $SNAP/bin
+
+layout:
+  /mnt:
+    bind: $SNAP_DATA/mnt

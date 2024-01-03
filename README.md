@@ -7,12 +7,25 @@ This is an attempt to snap out matter chip-tool application, which is a referenc
 - Ensure that you will have build-essentials installed in this container.
 - Clone this repo.
 - To build the snap use following command at bash prompt inside your container
-  ``` snapcraft --destructive-mode ```
+
+``` 
+  	snapcraft --destructive-mode 
+			OR for arm64 and amd64 build machine
+  	snapcraft --destructive-mode --verbosity=verbose --build-for=arm64
+
+```
+  
 
 ## Notes
-- At this moment this will build for x86_64 arch only. For arm64, work is in progress. 
-- You should have at least 35GB of disk space available.
-- Since matter source code is very big, downloading whole source can take considerable amount of time, which affects snap build time.
+
+- One of the major thing that is added in this chip-tool snap version is support for production grade matter-devices devices .
+
+- Since matter source code is very big, downloading whole source can take considerable amount of time, which affects snap build time. So local build is enabled , for this first time you have to build the snap without defining any environment varible
+ then for successive builds ensure that you move ```parts/matter-dev/build to $SNAPCRAFT_PROJECT_DIR/```
+ and export LOCAL_BUILD="YES" in the build environment, then build the snap.
+
+- for building for arm64 you need install c/c++ compiler for arm and other build tools.
+
 - To test this snap
    - Install the snap
      - ``` snap install chip-tool_0.1_amd64.snap --dangerous```
