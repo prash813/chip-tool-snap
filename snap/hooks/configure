@@ -1,5 +1,5 @@
 #!/bin/sh
-VAR="$(snapctl get otbr-snap paa-path)"
+VAR="$(snapctl get  paa-path)"
 if [ -z "$VAR" ]
 then
 	unset CHIPTOOL_PAA_TRUST_STORE_PATH
